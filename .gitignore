@@ -1,0 +1,17 @@
+# Claude Code internal
+.claude/
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
