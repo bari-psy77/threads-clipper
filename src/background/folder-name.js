@@ -20,12 +20,11 @@ function firstLineTruncated(text) {
   return line.length > MAX_FIRST_LINE ? line.slice(0, MAX_FIRST_LINE) : line;
 }
 
-export function buildFolderName({ postedAt, author, firstLine }) {
+export function buildFolderName({ postedAt, firstLine }) {
   const date = isoDate(postedAt);
-  const safeAuthor = sanitizeFolderName(author);
   const truncated = firstLineTruncated(firstLine);
   const safeLine = sanitizeFolderName(truncated);
-  return `${date} ${safeAuthor} ${safeLine}`;
+  return `${date} ${safeLine}`;
 }
 
 export async function resolveCollision(client, baseFolder, candidateName, currentUrl) {

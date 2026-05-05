@@ -38,7 +38,6 @@ async function handleSave() {
 
     const baseName = buildFolderName({
       postedAt: post.posted_at,
-      author: post.author,
       firstLine: post.segments[0]?.text || '',
     });
 
