@@ -57,7 +57,7 @@ async function handleSave() {
     const { imageMap, missingImages } = await uploadImages(client, folderPath, post.segments);
 
     const md = buildMarkdown({ post, imageMap, missingImages });
-    await client.putMarkdown(`${folderPath}/note.md`, md);
+    await client.putMarkdown(`${folderPath}/${folderName}.md`, md);
 
     notify.success(folderName, {
       onClick: () => openInObsidian(settings.vaultName, settings.folder, folderName),
@@ -114,7 +114,7 @@ function openInObsidian(vaultName, folder, folderName) {
     notify.warn('vault 이름을 옵션 페이지에서 설정하세요');
     return;
   }
-  const file = encodeURIComponent(`${folder}/${folderName}/note.md`);
+  const file = encodeURIComponent(`${folder}/${folderName}/${folderName}.md`);
   const vault = encodeURIComponent(vaultName);
   chrome.tabs.create({ url: `obsidian://open?vault=${vault}&file=${file}` });
 }
