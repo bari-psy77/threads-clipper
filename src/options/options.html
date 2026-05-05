@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Threads Clipper 설정</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 0.5rem; margin-top: 0.25rem;
+    border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+  }
+  small { color: #666; }
+  button { margin-top: 1.5rem; padding: 0.5rem 1rem; cursor: pointer; }
+  #status { margin-top: 1rem; padding: 0.5rem; border-radius: 4px; }
+  .ok { background: #d4edda; color: #155724; }
+  .err { background: #f8d7da; color: #721c24; }
+  hr { margin: 2rem 0; }
+</style>
+</head>
+<body>
+<h1>Threads Clipper 설정</h1>
+
+<label>API 호스트
+  <input type="text" id="apiHost" placeholder="https://127.0.0.1:27124">
+  <small>Obsidian Local REST API 플러그인의 주소. 기본값을 거의 그대로 쓰세요.</small>
+</label>
+
+<label>API 토큰 *
+  <input type="password" id="apiToken">
+  <small>Obsidian Settings → Local REST API 플러그인에서 발급받아 붙여넣으세요.</small>
+</label>
+
+<label>저장 폴더
+  <input type="text" id="folder" placeholder="Thread">
+  <small>vault 안에서 노트가 저장될 폴더.</small>
+</label>
+
+<label>Vault 이름 *
+  <input type="text" id="vaultName">
+  <small>알림 클릭 시 노트를 열기 위해 필요. Obsidian의 vault 이름.</small>
+</label>
+
+<button id="save">저장</button>
+<button id="test">연결 테스트</button>
+
+<div id="status"></div>
+
+<hr>
+<p><small>단축키 변경: <code>chrome://extensions/shortcuts</code></small></p>
+
+<script type="module" src="options.js"></script>
+</body>
+</html>
