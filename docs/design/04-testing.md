@@ -23,7 +23,7 @@
 | 이미지 1개 포함 | `{ segments: [{ text: "...", images: ["img1.jpg"] }] }` | 본문 + `![[img1.jpg]]` |
 | 이어쓴 segment 다수 | segments 3개 | 각 segment가 `---` 구분자로 분리 |
 | 이미지 누락 표시 | `missingImages: [1]` | 본문 끝에 `<!-- 이미지 1개 누락 -->` |
-| 첫줄에 마크다운 특수문자 | `text: "# Hello"` | 제목으로 들어갈 때 escape 또는 그대로 (정책 결정 필요) |
+| 첫줄에 마크다운 특수문자 | `text: "# Hello"` | 그대로 사용 (사용자가 의도한 형식이므로 escape 안 함) |
 
 #### `folder-name.js`
 
@@ -39,11 +39,10 @@
 
 ### 도구 선택
 
-**Vitest** — 가장 가볍고 모던. ESM 네이티브.
+**Vitest** 사용 — 가장 가볍고 모던. ESM 네이티브.
 - `package.json`만 있으면 됨, 별도 빌드 설정 불필요
 - `npm test` 한 줄로 실행
-
-대안: Node 빌트인 `node:test` (외부 의존 0개) — Vitest의 풍부함이 필요 없으면 이쪽도 OK. 구현 시 결정.
+- chrome API mock은 `globalThis.chrome = { storage: ... }` 식으로 setup 파일에서 직접 주입 (별도 라이브러리 불필요)
 
 ---
 
