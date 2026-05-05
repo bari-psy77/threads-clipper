@@ -25,14 +25,8 @@
   "content_scripts": [
     {
       "matches": ["https://www.threads.com/@*/post/*"],
-      "js": ["src/content/loader.js"],
+      "js": ["src/content/scrape.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/content/scrape.js"],
-      "matches": ["https://www.threads.com/*"]
     }
   ],
   "options_ui": {
