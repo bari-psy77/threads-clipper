@@ -2,14 +2,26 @@
   'use strict';
 
   const SELECTORS = {
-    article: '[role="article"]',
+    article: '[data-pressable-container]',
     authorLink: 'a[href^="/@"]',
-    textSpan: 'span',
+    textSpan: 'span[dir="auto"]',
     image: 'img[src]',
     time: 'time[datetime]',
   };
 
   const URL_RE = /^https?:\/\/[^\/]+\/(@[^\/]+)\/post\/[^\/]+/;
+  const PLACEHOLDER_RE = /님에게 답글 남기기/;
+  const UI_PREFIXES = ['인기순', '활동 보기'];
+  const PROFILE_ALT_RE = /프로필 사진|Profile photo/;
+  const AVATAR_MAX_PX = 40;
+
+  function isBodyTextSpan(span) {
+    const authorLink = span.closest('a[href^="/@"]');
+    if (authorLink && !(authorLink.getAttribute('href') || '').includes('/post/')) return false;
+    if (span.closest('time')) return false;
+    if (span.closest('[role="button"]')) return false;
+    return true;
+  }
 
   function authorOfArticle(article) {
     const link = article.querySelector(SELECTORS.authorLink);
@@ -20,11 +32,19 @@
   }
 
   function textOfArticle(article) {
-    const spans = article.querySelectorAll(SELECTORS.textSpan);
+    const elements = article.querySelectorAll(`time, ${SELECTORS.textSpan}`);
     const parts = [];
-    for (const s of spans) {
-      const t = (s.textContent || '').trim();
-      if (t && !parts.includes(t)) parts.push(t);
+    let pastHeader = false;
+    for (const el of elements) {
+      if (el.tagName === 'TIME') { pastHeader = true; continue; }
+      if (!pastHeader) continue;
+      if (!isBodyTextSpan(el)) continue;
+      const t = (el.textContent || '').trim();
+      if (!t) continue;
+      if (PLACEHOLDER_RE.test(t)) continue;
+      if (UI_PREFIXES.some(k => t.startsWith(k))) continue;
+      if (parts.includes(t)) continue;
+      parts.push(t);
     }
     return parts.join('\n');
   }
@@ -33,6 +53,12 @@
     const imgs = article.querySelectorAll(SELECTORS.image);
     const urls = [];
     for (const img of imgs) {
+      const alt = img.getAttribute('alt') || '';
+      if (PROFILE_ALT_RE.test(alt)) continue;
+      const w = parseInt(img.getAttribute('width'), 10) || img.naturalWidth || 0;
+      const h = parseInt(img.getAttribute('height'), 10) || img.naturalHeight || 0;
+      if (w > 0 && w <= AVATAR_MAX_PX) continue;
+      if (h > 0 && h <= AVATAR_MAX_PX) continue;
       const src = img.getAttribute('src');
       if (src) urls.push(src);
     }
