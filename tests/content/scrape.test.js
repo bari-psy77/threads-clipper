@@ -1,11 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { extractPost } from '../../src/content/scrape.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtureHtml = readFileSync(resolve(__dirname, '../fixtures/post-sample.html'), 'utf8');
+const scrapeCode = readFileSync(resolve(__dirname, '../../src/content/scrape.js'), 'utf8');
+
+let extractPost;
+
+beforeAll(() => {
+  // Evaluate the IIFE to attach extractPost to globalThis for testing.
+  new Function(scrapeCode)();
+  extractPost = globalThis.__threadsClipperExtractPost;
+});
 
 describe('extractPost', () => {
   beforeEach(() => {
