@@ -17,9 +17,18 @@ function firstLineHeading(segments) {
   return line || 'Untitled';
 }
 
-function renderSegment(segment, imageMap) {
+function stripFirstLine(text) {
+  if (!text) return '';
+  const idx = text.indexOf('\n');
+  return idx === -1 ? '' : text.slice(idx + 1).replace(/^\s+/, '');
+}
+
+function renderSegment(segment, imageMap, stripFirst = false) {
   const lines = [];
-  if (segment.text) lines.push(segment.text);
+  if (segment.text) {
+    const text = stripFirst ? stripFirstLine(segment.text) : segment.text;
+    if (text) lines.push(text);
+  }
   for (const url of segment.images || []) {
     const local = imageMap[url];
     if (local) {
@@ -38,7 +47,7 @@ export function buildMarkdown({ post, imageMap, missingImages, now }) {
   const parts = [fm, heading, ''];
   post.segments.forEach((seg, idx) => {
     if (idx === 0) {
-      parts.push(renderSegment(seg, imageMap));
+      parts.push(renderSegment(seg, imageMap, true));
     } else {
       parts.push('');
       parts.push('---');
