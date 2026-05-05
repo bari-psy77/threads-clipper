@@ -28,7 +28,7 @@ export function buildFolderName({ postedAt, firstLine }) {
 }
 
 export async function resolveCollision(client, baseFolder, candidateName, currentUrl) {
-  const tryPath = (name) => `${baseFolder}/${name}/note.md`;
+  const tryPath = (name) => `${baseFolder}/${name}/${name}.md`;
 
   if (!(await client.noteExists(tryPath(candidateName)))) {
     return { folderName: candidateName, duplicate: false };

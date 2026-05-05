@@ -61,7 +61,7 @@
    - **단축키 `Ctrl+Shift+S`**
    - 툴바의 확장 아이콘 클릭
 3. 데스크톱 알림이 표시되면 성공 → 알림 클릭 시 Obsidian에서 노트 열림
-4. vault 안 `Thread/2026-MM-DD [본문 첫 줄]/note.md` 위치에 저장됨
+4. vault 안 `Thread/2026-MM-DD [본문 첫 줄]/2026-MM-DD [본문 첫 줄].md` 위치에 저장됨 (파일명은 폴더명과 동일하게 — 그래프 뷰에서 식별 가능)
 
 ### 단축키 변경
 
@@ -77,12 +77,12 @@
 ```
 Thread/
 └── 2026-05-04 [사업하는 스친이들 주목]/
-    ├── note.md
+    ├── 2026-05-04 [사업하는 스친이들 주목].md
     ├── img1.jpg
     └── img2.jpg
 ```
 
-`note.md` 예시:
+노트 마크다운 예시:
 ```markdown
 ---
 source: https://www.threads.com/@user/post/abc123
