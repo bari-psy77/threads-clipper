@@ -10,11 +10,13 @@ chrome.notifications.onClicked.addListener((id) => {
   }
 });
 
+const ICON_URL = chrome.runtime.getURL('icons/icon128.png');
+
 function show({ title, message, onClick }) {
   const id = NOTIF_PREFIX + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
   chrome.notifications.create(id, {
     type: 'basic',
-    iconUrl: 'icons/icon128.png',
+    iconUrl: ICON_URL,
     title,
     message,
     requireInteraction: !!onClick,
