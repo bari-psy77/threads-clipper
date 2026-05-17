@@ -10,7 +10,7 @@
   };
 
   const URL_RE = /^https?:\/\/[^\/]+\/(@[^\/]+)\/post\/[^\/]+/;
-  const PLACEHOLDER_RE = /님에게 답글 남기기/;
+  const PLACEHOLDER_RE = /님에게 답글 남기기|아직 답글이 없습니다/;
   const UI_PREFIXES = ['인기순', '활동 보기'];
   const PROFILE_ALT_RE = /프로필 사진|Profile photo/;
   const AVATAR_MAX_PX = 40;
@@ -21,6 +21,49 @@
     if (span.closest('time')) return false;
     if (span.closest('[role="button"]')) return false;
     return true;
+  }
+
+  function isExternalHref(href) {
+    return /^https?:\/\//.test(href) && !/^https?:\/\/(www\.)?threads\.(net|com)\//.test(href);
+  }
+
+  function stripInvisibles(s) {
+    return s.replace(/[​-‍⁠﻿]+/g, '');
+  }
+
+  function unwrapThreadsRedirect(href) {
+    try {
+      const u = new URL(href);
+      if (/(^|\.)threads\.(com|net)$/.test(u.hostname) && u.searchParams.has('u')) {
+        const target = u.searchParams.get('u');
+        if (target && /^https?:\/\//.test(target)) return stripInvisibles(target);
+      }
+    } catch (_) {}
+    return stripInvisibles(href);
+  }
+
+  function expandSpanText(span) {
+    const parentAnchor = span.closest('a[href]');
+    if (parentAnchor) {
+      const href = parentAnchor.getAttribute('href') || '';
+      if (isExternalHref(href)) return unwrapThreadsRedirect(href);
+    }
+    function walk(node) {
+      let out = '';
+      for (const child of node.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          out += child.nodeValue;
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          if (child.tagName === 'A' && isExternalHref(child.getAttribute('href') || '')) {
+            out += unwrapThreadsRedirect(child.getAttribute('href'));
+          } else {
+            out += walk(child);
+          }
+        }
+      }
+      return out;
+    }
+    return walk(span);
   }
 
   function authorOfArticle(article) {
@@ -39,7 +82,7 @@
       if (el.tagName === 'TIME') { pastHeader = true; continue; }
       if (!pastHeader) continue;
       if (!isBodyTextSpan(el)) continue;
-      const t = (el.textContent || '').trim();
+      const t = expandSpanText(el).trim();
       if (!t) continue;
       if (PLACEHOLDER_RE.test(t)) continue;
       if (UI_PREFIXES.some(k => t.startsWith(k))) continue;
