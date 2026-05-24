@@ -47,6 +47,29 @@
 <div id="status"></div>
 
 <hr>
+
+<h2>리포스트 일괄 가져오기</h2>
+<p><small>본인 Threads 사용자명을 입력하면 <code>/@{username}/reposts</code>에서 전체 리포스트를 수집해 Obsidian에 동기화합니다. 기존 노트는 덮어쓰기됩니다.</small></p>
+
+<label>사용자명 (@ 제외)
+  <input type="text" id="bulkUsername" placeholder="bari_psy77">
+</label>
+
+<label>기간
+  <select id="bulkRange">
+    <option value="all">전체</option>
+    <option value="1d">최근 1일</option>
+    <option value="7d">최근 1주</option>
+    <option value="30d">최근 1개월</option>
+    <option value="90d">최근 3개월</option>
+  </select>
+</label>
+
+<button id="bulkRun">일괄 가져오기 실행</button>
+
+<div id="bulkProgress" style="margin-top: 1rem; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
+
+<hr>
 <p><small>단축키 변경: <code>chrome://extensions/shortcuts</code></small></p>
 
 <script type="module" src="options.js"></script>

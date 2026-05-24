@@ -144,8 +144,77 @@
     };
   }
 
+  const POST_HREF_RE = /^\/(@[^\/?#]+)\/post\/([^\/?#]+)/;
+
+  function findNearestArticleTime(anchor) {
+    let node = anchor;
+    for (let depth = 0; depth < 12 && node; depth++) {
+      const t = node.querySelector && node.querySelector('time[datetime]');
+      if (t) return t.getAttribute('datetime');
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function collectPostEntriesOnPage() {
+    const anchors = document.querySelectorAll('a[href*="/post/"]');
+    const map = new Map();
+    for (const a of anchors) {
+      const href = a.getAttribute('href') || '';
+      const m = href.match(POST_HREF_RE);
+      if (!m) continue;
+      const url = `https://www.threads.com/${m[1]}/post/${m[2]}`;
+      if (map.has(url)) continue;
+      const postedAt = findNearestArticleTime(a);
+      map.set(url, { url, postedAt });
+    }
+    return map;
+  }
+
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  async function collectRepostEntries({ maxScrolls = 300, stableRounds = 6, scrollDelayMs = 2000, cutoffMs = null } = {}) {
+    const seen = new Map();
+    let unchangedRounds = 0;
+    let lastHeight = 0;
+    let cutoffReached = false;
+    for (let i = 0; i < maxScrolls; i++) {
+      const before = seen.size;
+      const newest = collectPostEntriesOnPage();
+      for (const [url, entry] of newest) if (!seen.has(url)) seen.set(url, entry);
+      const after = seen.size;
+      const height = document.body.scrollHeight;
+      const heightChanged = height !== lastHeight;
+      lastHeight = height;
+      if (after === before && !heightChanged) unchangedRounds++; else unchangedRounds = 0;
+
+      if (cutoffMs) {
+        const oldestVisible = Array.from(newest.values())
+          .map((e) => e.postedAt ? Date.parse(e.postedAt) : NaN)
+          .filter((t) => !isNaN(t));
+        if (oldestVisible.length > 0 && Math.min(...oldestVisible) < cutoffMs) {
+          cutoffReached = true;
+        }
+      }
+
+      console.log(`[threads-clipper] scroll ${i + 1}: seen=${after}, height=${height}, unchanged=${unchangedRounds}, cutoffReached=${cutoffReached}`);
+      if (cutoffReached) break;
+      if (unchangedRounds >= stableRounds) break;
+      window.scrollTo(0, document.body.scrollHeight);
+      await sleep(scrollDelayMs);
+    }
+    return Array.from(seen.values());
+  }
+
+  async function collectRepostUrls(opts) {
+    const entries = await collectRepostEntries(opts);
+    return entries.map((e) => e.url);
+  }
+
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (msg && msg.type === 'EXTRACT_POST') {
         try {
           const post = extractPost(window.location.href);
@@ -155,11 +224,24 @@
         }
         return true;
       }
+      if (msg && msg.type === 'COLLECT_REPOST_URLS') {
+        collectRepostUrls(msg.options || {})
+          .then((urls) => sendResponse({ ok: true, urls }))
+          .catch((e) => sendResponse({ ok: false, error: e.message }));
+        return true;
+      }
+      if (msg && msg.type === 'COLLECT_REPOST_ENTRIES') {
+        collectRepostEntries(msg.options || {})
+          .then((entries) => sendResponse({ ok: true, entries }))
+          .catch((e) => sendResponse({ ok: false, error: e.message }));
+        return true;
+      }
     });
     console.log('[threads-clipper] content script ready');
   }
 
   if (typeof globalThis !== 'undefined') {
     globalThis.__threadsClipperExtractPost = extractPost;
+    globalThis.__threadsClipperCollectRepostUrls = collectRepostUrls;
   }
 })();

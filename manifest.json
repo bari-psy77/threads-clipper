@@ -24,7 +24,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.threads.com/@*/post/*"],
+      "matches": [
+        "https://www.threads.com/@*/post/*",
+        "https://www.threads.com/@*/reposts*"
+      ],
       "js": ["src/content/scrape.js"],
       "run_at": "document_idle"
     }

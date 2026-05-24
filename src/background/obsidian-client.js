@@ -93,4 +93,34 @@ export class ObsidianClient {
     const m = text.match(SOURCE_RE);
     return m ? m[1] : null;
   }
+
+  async listDir(vaultPath) {
+    const url = `${this._url(vaultPath)}${vaultPath.endsWith('/') ? '' : '/'}`;
+    const res = await this._do({
+      url,
+      init: { method: 'GET', headers: this._headers({ Accept: 'application/json' }) },
+    });
+    if (res.status === 404) return [];
+    if (!res.ok) {
+      const body = await res.text();
+      throw new ObsidianHttpError(`GET ${vaultPath}/ failed: ${res.status} ${body}`, res.status);
+    }
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.files) ? data.files : [];
+  }
+
+  async listExistingSources(folder) {
+    const result = new Map();
+    const entries = await this.listDir(folder);
+    for (const entry of entries) {
+      if (!entry.endsWith('/')) continue;
+      const sub = entry.replace(/\/$/, '');
+      const notePath = `${folder}/${sub}/${sub}.md`;
+      try {
+        const src = await this.readNoteSource(notePath);
+        if (src) result.set(src, notePath);
+      } catch (_) {}
+    }
+    return result;
+  }
 }
