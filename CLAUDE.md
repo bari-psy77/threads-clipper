@@ -4,7 +4,7 @@ Chrome extension. Threads 게시물을 Obsidian Local REST API로 마크다운 �
 
 ## Git
 
-- 커밋 author: `bari-psy77 <msdev1.ocube@gmail.com>` (현재 로컬 config 그대로 사용, 변경 금지)
+- 커밋 author: `bari-psy77 <sebal1690@gmail.com>` (개인 계정, 변경 금지 — `msdev1.ocube@gmail.com`은 회사 계정이라 사용 X)
 - 푸시 대상: `origin/main` (https://github.com/bari-psy77/threads-clipper.git)
 
 ## Build/Test
