@@ -175,6 +175,37 @@
     return new Promise((r) => setTimeout(r, ms));
   }
 
+  // 진행 상황 오버레이 (수집 탭에 직접 표시 — 백그라운드 탭 경고용)
+  function getOverlay() {
+    let el = document.getElementById('__tc_overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__tc_overlay';
+      el.style.cssText =
+        'position:fixed;top:12px;right:12px;z-index:2147483647;background:#111;color:#fff;' +
+        'padding:10px 14px;border-radius:8px;font:13px/1.45 -apple-system,sans-serif;' +
+        'box-shadow:0 2px 10px rgba(0,0,0,.45);max-width:280px;pointer-events:none';
+      document.documentElement.appendChild(el);
+    }
+    return el;
+  }
+
+  // 백그라운드/가려진 탭은 Chrome이 렌더링을 멈춰 가상 리스트가 새 항목을 mount하지
+  // 않음 → 수집이 초기 화면분에서 멈춤. 탭이 hidden이면 일시정지하고 다시 보이면 재개.
+  async function waitVisible(overlay) {
+    if (!document.hidden) return;
+    overlay.textContent = '⏸ 수집 일시정지 — 이 탭을 화면 앞에 두세요. 백그라운드에서는 Threads가 글을 더 불러오지 않습니다.';
+    await new Promise((res) => {
+      const onShow = () => {
+        if (!document.hidden) {
+          document.removeEventListener('visibilitychange', onShow);
+          res();
+        }
+      };
+      document.addEventListener('visibilitychange', onShow);
+    });
+  }
+
   // 리포스트 페이지는 "리포스트한 순서(최신 먼저)"로 정렬됨. DOM에 리포스트 시점
   // timestamp는 없고 원본 게시일(time[datetime])만 있으므로 날짜 기반 컷오프는 불가능.
   // 대신 피드 순서(=리포스트 최신순)를 그대로 신뢰하고 maxPosts개까지 위에서부터 수집.
@@ -184,11 +215,14 @@
     const seen = new Map();
     let unchangedRounds = 0;
     let lastHeight = 0;
+    const overlay = getOverlay();
     for (let i = 0; i < maxScrolls; i++) {
+      await waitVisible(overlay);
       const before = seen.size;
       const newest = collectPostEntriesOnPage();
       for (const [url, entry] of newest) if (!seen.has(url)) seen.set(url, entry);
       const after = seen.size;
+      overlay.textContent = `리포스트 수집 중… ${after}개 (스크롤 ${i + 1})\n이 탭을 닫거나 가리지 마세요.`;
 
       if (maxPosts && after >= maxPosts) {
         console.log(`[threads-clipper] reached maxPosts=${maxPosts} at scroll ${i + 1}`);
@@ -207,6 +241,8 @@
       window.scrollBy(0, Math.round(window.innerHeight * 0.8));
       await sleep(scrollDelayMs);
     }
+    overlay.textContent = `수집 완료: ${seen.size}개`;
+    setTimeout(() => overlay.remove(), 3000);
     // Map 삽입 순서 = DOM 위→아래 = 리포스트 최신순. 최근 N개 = 앞에서 slice.
     const all = Array.from(seen.values());
     return maxPosts ? all.slice(0, maxPosts) : all;
