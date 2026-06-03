@@ -3,6 +3,7 @@ export const DEFAULTS = Object.freeze({
   apiToken: '',
   folder: 'Thread',
   vaultName: '',
+  bulkUsername: '',
 });
 
 const KEYS = Object.keys(DEFAULTS);

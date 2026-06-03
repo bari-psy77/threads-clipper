@@ -15,7 +15,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'BULK_IMPORT_REPOSTS') {
     runBulkImport(msg.username, normalizeLimit(msg.limit))
       .then((summary) => sendResponse({ ok: true, summary }))
-      .catch((e) => sendResponse({ ok: false, error: e.message }));
+      .catch((e) => {
+        // 옵션 페이지는 응답 대신 progress로 완료/에러를 판단하므로 반드시 broadcast
+        broadcastProgress({ phase: 'error', message: e.message });
+        sendResponse({ ok: false, error: e.message });
+      });
     return true;
   }
 });

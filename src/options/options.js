@@ -9,6 +9,7 @@ async function init() {
   $('apiToken').value = s.apiToken || '';
   $('folder').value = s.folder || DEFAULTS.folder;
   $('vaultName').value = s.vaultName || '';
+  $('bulkUsername').value = s.bulkUsername || '';
 }
 
 function setStatus(msg, isOk) {
@@ -60,6 +61,7 @@ function formatProgress(payload) {
       const s = payload.summary;
       return `완료. 신규 ${s.saved}, 덮어쓰기 ${s.overwritten}, 실패 ${s.failed}` + (s.failures.length ? `\n실패 URL:\n${s.failures.join('\n')}` : '');
     }
+    case 'error': return `에러: ${payload.message}`;
     default: return JSON.stringify(payload);
   }
 }
@@ -67,24 +69,24 @@ function formatProgress(payload) {
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg && msg.type === 'BULK_IMPORT_PROGRESS') {
     appendProgress(formatProgress(msg.payload));
+    if (msg.payload.phase === 'done' || msg.payload.phase === 'error') {
+      $('bulkRun').disabled = false;
+    }
   }
 });
 
 async function onBulkRun() {
   const username = $('bulkUsername').value.trim().replace(/^@/, '');
   if (!username) { appendProgress('사용자명을 입력하세요'); return; }
+  await saveSettings({ bulkUsername: username }); // 다음 실행 시 자동 채움
   const limit = $('bulkLimit').value;
   $('bulkProgress').textContent = '';
   appendProgress(`시작: @${username} (${limit === 'all' ? '전체' : `최근 ${limit}개`})`);
   $('bulkRun').disabled = true;
-  try {
-    const res = await chrome.runtime.sendMessage({ type: 'BULK_IMPORT_REPOSTS', username, limit });
-    if (!res || !res.ok) appendProgress(`에러: ${res?.error || 'unknown'}`);
-  } catch (e) {
-    appendProgress(`에러: ${e.message}`);
-  } finally {
-    $('bulkRun').disabled = false;
-  }
+  // 수집·저장은 수 분 걸려 MV3 서비스워커 메시지 채널이 응답 전에 닫힐 수 있음
+  // ("message channel closed" 에러). 응답은 기다리지 않고 완료/에러는
+  // BULK_IMPORT_PROGRESS의 'done'/'error' 단계로 판단한다.
+  chrome.runtime.sendMessage({ type: 'BULK_IMPORT_REPOSTS', username, limit }).catch(() => {});
 }
 
 document.addEventListener('DOMContentLoaded', () => {
