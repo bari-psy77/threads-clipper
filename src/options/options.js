@@ -73,12 +73,12 @@ chrome.runtime.onMessage.addListener((msg) => {
 async function onBulkRun() {
   const username = $('bulkUsername').value.trim().replace(/^@/, '');
   if (!username) { appendProgress('사용자명을 입력하세요'); return; }
-  const range = $('bulkRange').value;
+  const limit = $('bulkLimit').value;
   $('bulkProgress').textContent = '';
-  appendProgress(`시작: @${username} (기간: ${range})`);
+  appendProgress(`시작: @${username} (${limit === 'all' ? '전체' : `최근 ${limit}개`})`);
   $('bulkRun').disabled = true;
   try {
-    const res = await chrome.runtime.sendMessage({ type: 'BULK_IMPORT_REPOSTS', username, range });
+    const res = await chrome.runtime.sendMessage({ type: 'BULK_IMPORT_REPOSTS', username, limit });
     if (!res || !res.ok) appendProgress(`에러: ${res?.error || 'unknown'}`);
   } catch (e) {
     appendProgress(`에러: ${e.message}`);

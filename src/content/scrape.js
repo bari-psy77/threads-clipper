@@ -175,37 +175,41 @@
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  async function collectRepostEntries({ maxScrolls = 300, stableRounds = 6, scrollDelayMs = 2000, cutoffMs = null } = {}) {
+  // 리포스트 페이지는 "리포스트한 순서(최신 먼저)"로 정렬됨. DOM에 리포스트 시점
+  // timestamp는 없고 원본 게시일(time[datetime])만 있으므로 날짜 기반 컷오프는 불가능.
+  // 대신 피드 순서(=리포스트 최신순)를 그대로 신뢰하고 maxPosts개까지 위에서부터 수집.
+  // 가상 스크롤(virtualized list) 때문에 풀높이 점프하면 지나친 카드가 언마운트되어
+  // 영구 누락됨 → 뷰포트보다 작은 보폭으로 점진 스크롤하며 매 스텝 수집.
+  async function collectRepostEntries({ maxScrolls = 600, stableRounds = 6, scrollDelayMs = 1500, maxPosts = null } = {}) {
     const seen = new Map();
     let unchangedRounds = 0;
     let lastHeight = 0;
-    let cutoffReached = false;
     for (let i = 0; i < maxScrolls; i++) {
       const before = seen.size;
       const newest = collectPostEntriesOnPage();
       for (const [url, entry] of newest) if (!seen.has(url)) seen.set(url, entry);
       const after = seen.size;
-      const height = document.body.scrollHeight;
-      const heightChanged = height !== lastHeight;
-      lastHeight = height;
-      if (after === before && !heightChanged) unchangedRounds++; else unchangedRounds = 0;
 
-      if (cutoffMs) {
-        const oldestVisible = Array.from(newest.values())
-          .map((e) => e.postedAt ? Date.parse(e.postedAt) : NaN)
-          .filter((t) => !isNaN(t));
-        if (oldestVisible.length > 0 && Math.min(...oldestVisible) < cutoffMs) {
-          cutoffReached = true;
-        }
+      if (maxPosts && after >= maxPosts) {
+        console.log(`[threads-clipper] reached maxPosts=${maxPosts} at scroll ${i + 1}`);
+        break;
       }
 
-      console.log(`[threads-clipper] scroll ${i + 1}: seen=${after}, height=${height}, unchanged=${unchangedRounds}, cutoffReached=${cutoffReached}`);
-      if (cutoffReached) break;
+      const height = document.body.scrollHeight;
+      const atBottom = window.innerHeight + window.scrollY >= height - 50;
+      const heightChanged = height !== lastHeight;
+      lastHeight = height;
+      // 끝에 닿았고 새 글도 안 들어오고 높이도 안 변하면 진짜 바닥
+      if (after === before && atBottom && !heightChanged) unchangedRounds++; else unchangedRounds = 0;
+
+      console.log(`[threads-clipper] scroll ${i + 1}: seen=${after}, height=${height}, atBottom=${atBottom}, unchanged=${unchangedRounds}`);
       if (unchangedRounds >= stableRounds) break;
-      window.scrollTo(0, document.body.scrollHeight);
+      window.scrollBy(0, Math.round(window.innerHeight * 0.8));
       await sleep(scrollDelayMs);
     }
-    return Array.from(seen.values());
+    // Map 삽입 순서 = DOM 위→아래 = 리포스트 최신순. 최근 N개 = 앞에서 slice.
+    const all = Array.from(seen.values());
+    return maxPosts ? all.slice(0, maxPosts) : all;
   }
 
   async function collectRepostUrls(opts) {

@@ -55,15 +55,16 @@
   <input type="text" id="bulkUsername" placeholder="bari_psy77">
 </label>
 
-<label>기간
-  <select id="bulkRange">
+<label>가져올 개수
+  <select id="bulkLimit">
     <option value="all">전체</option>
-    <option value="1d">최근 1일</option>
-    <option value="7d">최근 1주</option>
-    <option value="30d">최근 1개월</option>
-    <option value="90d">최근 3개월</option>
+    <option value="10">최근 10개</option>
+    <option value="20">최근 20개</option>
+    <option value="30">최근 30개</option>
+    <option value="60">최근 60개</option>
   </select>
 </label>
+<p><small>리포스트한 시점은 Threads 페이지에 노출되지 않아 날짜 기준 필터는 불가능합니다. 피드의 리포스트 최신순으로 위에서부터 N개를 가져옵니다.</small></p>
 
 <button id="bulkRun">일괄 가져오기 실행</button>
 

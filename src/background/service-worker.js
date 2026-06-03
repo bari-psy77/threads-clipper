@@ -13,24 +13,19 @@ chrome.commands.onCommand.addListener((cmd) => {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'BULK_IMPORT_REPOSTS') {
-    runBulkImport(msg.username, msg.range || 'all')
+    runBulkImport(msg.username, normalizeLimit(msg.limit))
       .then((summary) => sendResponse({ ok: true, summary }))
       .catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
   }
 });
 
-function rangeToCutoffMs(range) {
-  const day = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  switch (range) {
-    case '1d': return now - 1 * day;
-    case '7d': return now - 7 * day;
-    case '30d': return now - 30 * day;
-    case '90d': return now - 90 * day;
-    case 'all':
-    default: return null;
-  }
+// 리포스트 시점 timestamp가 DOM에 없어 날짜 필터 불가. 개수 제한으로 대체.
+// 'all' 또는 falsy → null(전체), 그 외 양의 정수 → 최근 N개.
+function normalizeLimit(limit) {
+  if (limit === 'all' || limit == null || limit === '') return null;
+  const n = parseInt(limit, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 async function handleSave() {
@@ -104,22 +99,19 @@ async function savePost(client, settings, post, { overwrite, existingPath } = {}
   return { duplicate: false, folderName, folderPath };
 }
 
-async function runBulkImport(username, range) {
+async function runBulkImport(username, maxPosts) {
   if (!username) throw new Error('username required');
 
   const settings = await loadSettings();
   if (!settings.apiToken) throw new Error('API 토큰을 설정하세요');
 
   const client = new ObsidianClient(settings);
-  const cutoffMs = rangeToCutoffMs(range);
+  const label = maxPosts ? `최근 ${maxPosts}개` : '전체';
 
-  broadcastProgress({ phase: 'collecting', message: `리포스트 수집 중… (기간: ${range})` });
-  const entries = await collectFromRepostsTab(username, cutoffMs);
-  const filtered = cutoffMs
-    ? entries.filter((e) => e.postedAt && Date.parse(e.postedAt) >= cutoffMs)
-    : entries;
-  const collectedUrls = filtered.map((e) => e.url);
-  broadcastProgress({ phase: 'collected', count: collectedUrls.length, message: `${collectedUrls.length}개 URL 수집 (총 ${entries.length}개 중 기간 필터 후)` });
+  broadcastProgress({ phase: 'collecting', message: `리포스트 수집 중… (${label})` });
+  const entries = await collectFromRepostsTab(username, maxPosts);
+  const collectedUrls = entries.map((e) => e.url);
+  broadcastProgress({ phase: 'collected', count: collectedUrls.length, message: `${collectedUrls.length}개 URL 수집 (${label})` });
 
   broadcastProgress({ phase: 'diffing', message: '기존 노트 조회 중…' });
   const existing = await client.listExistingSources(settings.folder);
@@ -156,7 +148,7 @@ async function runBulkImport(username, range) {
   return summary;
 }
 
-async function collectFromRepostsTab(username, cutoffMs) {
+async function collectFromRepostsTab(username, maxPosts) {
   const handle = username.startsWith('@') ? username : `@${username}`;
   const url = `https://www.threads.com/${handle}/reposts`;
   const [prevTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -168,7 +160,7 @@ async function collectFromRepostsTab(username, cutoffMs) {
     console.log('[threads-clipper] reposts tab final URL:', finalTab.url);
     const res = await chrome.tabs.sendMessage(tab.id, {
       type: 'COLLECT_REPOST_ENTRIES',
-      options: { maxScrolls: 300, stableRounds: 6, scrollDelayMs: 2000, cutoffMs },
+      options: { maxScrolls: 600, stableRounds: 6, scrollDelayMs: 1500, maxPosts },
     }).catch((e) => ({ ok: false, error: e.message }));
     if (!res || !res.ok) throw new Error(`리포스트 페이지 수집 실패 (URL=${finalTab.url}): ${res?.error || 'no response'}`);
     return res.entries;
