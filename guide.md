@@ -161,7 +161,7 @@ content script가 페이지에 주입되지 않은 상태. 보통:
 3. 0이 나오면 Threads가 셀렉터를 바꾼 것 → DOM 검사로 새 wrapper attribute 식별
 4. [src/content/scrape.js:5](src/content/scrape.js#L5)의 `SELECTORS.article` 업데이트
 
-본문 추출 필터(`isBodyTextSpan`, `PLACEHOLDER_RE`, `UI_PREFIXES`, `PROFILE_ALT_RE`)는 한국어 UI 기준입니다. 영어/다른 언어에서는 패턴 추가 필요.
+본문 추출 필터(`isBodyTextSpan`, `PLACEHOLDER_RE`, `UI_PREFIXES`, `UI_EXACT`, `PROFILE_ALT_RE`)는 한국어·영어 UI 기준입니다. 다른 언어에서는 패턴 추가 필요.
 
 ### Service Worker 디버깅
 

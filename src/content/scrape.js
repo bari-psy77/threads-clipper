@@ -10,8 +10,11 @@
   };
 
   const URL_RE = /^https?:\/\/[^\/]+\/(@[^\/]+)\/post\/[^\/]+/;
-  const PLACEHOLDER_RE = /님에게 답글 남기기|아직 답글이 없습니다/;
-  const UI_PREFIXES = ['인기순', '활동 보기'];
+  // 영어 패턴은 스팬 전체 일치(^…$)로 제한 — 본문이 해당 문구를 "포함"만 하는 경우 오필터 방지
+  const PLACEHOLDER_RE = /님에게 답글 남기기|아직 답글이 없습니다|^Reply to .+$|^No replies yet$/;
+  const UI_PREFIXES = ['인기순', '활동 보기', 'View activity', 'Sort by'];
+  // 정렬 옵션 라벨 — 'Top'을 prefix로 걸면 "Top 10 tips…" 같은 본문까지 지워져 exact match만
+  const UI_EXACT = ['Top', 'Recent'];
   const PROFILE_ALT_RE = /프로필 사진|Profile photo/;
   const AVATAR_MAX_PX = 40;
 
@@ -86,6 +89,7 @@
       if (!t) continue;
       if (PLACEHOLDER_RE.test(t)) continue;
       if (UI_PREFIXES.some(k => t.startsWith(k))) continue;
+      if (UI_EXACT.includes(t)) continue;
       if (parts.includes(t)) continue;
       parts.push(t);
     }

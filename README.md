@@ -87,7 +87,7 @@ npm run test:watch
 
 ## 알려진 제한
 
-- Threads의 한국어 UI 키워드(`인기순`, `활동 보기`, `님에게 답글 남기기`)에 의존하는 필터 일부 → 영어 UI에서는 추가 필터 필요
+- UI 텍스트 필터는 한국어(`인기순`, `활동 보기`, `님에게 답글 남기기`)·영어(`Top`, `View activity`, `Reply to …`) 키워드 기준 → 다른 언어 UI에서는 추가 필터 필요
 - `[data-pressable-container]` 셀렉터에 의존 → Threads DOM 변경 시 [src/content/scrape.js](src/content/scrape.js) 셀렉터 업데이트 필요
 - 자체서명 인증서(HTTPS 27124)는 Chrome service worker에서 막히는 경우가 있음 → 보통 HTTP 27123 권장 (자세한 내용 [guide.md](guide.md))
 

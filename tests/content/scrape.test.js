@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtureHtml = readFileSync(resolve(__dirname, '../fixtures/post-sample.html'), 'utf8');
+const fixtureEnHtml = readFileSync(resolve(__dirname, '../fixtures/post-sample-en.html'), 'utf8');
 const scrapeCode = readFileSync(resolve(__dirname, '../../src/content/scrape.js'), 'utf8');
 
 let extractPost;
@@ -58,5 +59,40 @@ describe('extractPost', () => {
 
   it('throws when URL has no /@handle/ segment', () => {
     expect(() => extractPost('https://www.threads.com/some-other-page')).toThrow();
+  });
+});
+
+describe('extractPost (English UI)', () => {
+  beforeEach(() => {
+    document.documentElement.innerHTML = fixtureEnHtml;
+  });
+
+  it('returns segments only from original author', () => {
+    const post = extractPost('https://www.threads.com/@testuser/post/xyz789');
+    expect(post.segments.length).toBe(2);
+    const allText = post.segments.map(s => s.text).join('\n');
+    expect(allText).not.toContain("Another user's reply");
+  });
+
+  it('extracts only body text, excluding English UI noise', () => {
+    const post = extractPost('https://www.threads.com/@testuser/post/xyz789');
+    expect(post.segments[0].text).toBe('First post body in English.');
+  });
+
+  it('filters English placeholders and UI keywords', () => {
+    const post = extractPost('https://www.threads.com/@testuser/post/xyz789');
+    const allText = post.segments.map(s => s.text).join('\n');
+    expect(allText).not.toContain('Reply to testuser');
+    expect(allText).not.toContain('No replies yet');
+    expect(allText).not.toContain('View activity');
+    expect(allText).not.toContain('Sort by');
+    expect(allText).not.toContain('Like');
+    expect(allText).not.toMatch(/^Top$/m);
+    expect(allText).not.toMatch(/^Recent$/m);
+  });
+
+  it('keeps body text that merely starts with a UI keyword', () => {
+    const post = extractPost('https://www.threads.com/@testuser/post/xyz789');
+    expect(post.segments[1].text).toBe('Top 10 tips — follow-up reply in English.');
   });
 });
