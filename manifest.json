@@ -8,6 +8,7 @@
     "https://www.threads.com/*",
     "https://*.cdninstagram.com/*",
     "https://*.fbcdn.net/*",
+    "http://127.0.0.1/*",
     "https://127.0.0.1/*"
   ],
   "background": {

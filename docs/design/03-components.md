@@ -216,7 +216,7 @@ notify.duplicate({ existingPath, onOpen })
 **책임:** 사용자 설정 입력 UI.
 
 **입력 필드:**
-- API 호스트 (기본 `https://127.0.0.1:27124`)
+- API 호스트 (기본 `http://127.0.0.1:27123`)
 - API 토큰 (마스킹 input)
 - 저장 폴더 (기본 `Thread`)
 - vault 이름 (obsidian:// URI에 필요)

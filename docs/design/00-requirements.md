@@ -85,7 +85,7 @@ tags: [threads]
 
 | 항목 | 기본값 | 비고 |
 |---|---|---|
-| API 호스트 | `https://127.0.0.1:27124` | Local REST API 플러그인 주소 |
+| API 호스트 | `http://127.0.0.1:27123` | Local REST API 플러그인 주소 (HTTP 권장 — HTTPS 27124는 자체서명 인증서 차단 잦음) |
 | API 토큰 | (비어있음) | 사용자가 플러그인에서 발급받아 입력. 필수. |
 | 저장 폴더 | `Thread` | vault 내 경로 |
 | 단축키 | `Ctrl+Shift+S` | `chrome://extensions/shortcuts`에서 변경 |

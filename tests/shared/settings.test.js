@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { loadSettings, saveSettings, DEFAULTS } from '../../src/shared/settings.js';
 
 describe('settings', () => {
+  it('defaults apiHost to the documented recommended host (HTTP 27123)', () => {
+    // guide.md/README recommend the plugin's non-encrypted HTTP server —
+    // the HTTPS 27124 self-signed cert is commonly blocked by Chrome.
+    expect(DEFAULTS.apiHost).toBe('http://127.0.0.1:27123');
+  });
+
   it('returns defaults when nothing is stored', async () => {
     const s = await loadSettings();
     expect(s.apiHost).toBe(DEFAULTS.apiHost);
