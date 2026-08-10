@@ -98,7 +98,9 @@ threads-clipper/
 │   ├── content/scrape.js      # Threads 페이지 DOM 추출 (IIFE)
 │   ├── options/               # 설정 페이지
 │   └── shared/settings.js     # 설정 저장소 (chrome.storage.sync)
+├── scripts/                   # 패키징 스크립트 (npm run package) — 확장에는 포함되지 않음
 ├── docs/
+│   ├── packaging.md           # 패키징 / 웹스토어 제출 준비 / 라이선스
 │   ├── design/                # 디자인 문서 (요건/아키텍처/데이터흐름/구성요소/테스트)
 │   └── superpowers/plans/     # 구현 계획
 ├── guide.md                   # 사용자 가이드 (상세)
@@ -116,6 +118,22 @@ npm run test:watch
 
 빌드 단계는 없음 — 파일을 그대로 Chrome에 압축해제 로드.
 
+### 패키징
+
+웹스토어 업로드용 zip 생성:
+
+```powershell
+npm run package     # → dist/threads-clipper-v<version>.zip
+```
+
+- `manifest.json`, `src/`, `icons/` 만 담는다 (테스트·fixture·문서·개발 설정은 제외).
+- zip 이름의 버전은 `manifest.json` 에서 읽는다. 버전이 없거나 형식이 틀리면 빌드가 중단된다.
+- **테스트를 먼저 돌리고, 실패하면 zip 을 만들지 않는다.**
+- 산출물(`dist/`, `*.zip`)은 gitignore 대상이라 저장소에 커밋되지 않는다.
+
+스토어 제출에 아직 필요한 것(스크린샷·권한 사유·개인정보처리방침 등)과 라이선스 선택지는
+[docs/packaging.md](docs/packaging.md)에 정리돼 있다.
+
 ### CI
 
 GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))가 `main` push 와 `main` 대상 PR에서 ubuntu-latest로 `npm ci` → `npx vitest run`을 돌린다 (Node 22, npm 캐시, 스케줄 실행 없음). 린터는 설정돼 있지 않아 CI에도 없다.
@@ -132,8 +150,10 @@ GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))가 `main` p
 ## 문서
 
 - [guide.md](guide.md) — 사용자 가이드 (설치/설정/사용/트러블슈팅)
+- [docs/packaging.md](docs/packaging.md) — 패키징, 웹스토어 제출 준비, 라이선스 선택지
 - [docs/design/](docs/design/) — 디자인 문서
 
 ## 라이선스
 
-미정 (개인 용도)
+미정 (개인 용도) — `LICENSE` 파일이 없어 제3자에게 사용·재배포 권한이 없는 상태다.
+공개 배포 전에 정해야 하며, 선택지는 [docs/packaging.md](docs/packaging.md#5-라이선스-미정--공개-배포-차단-항목)에 정리돼 있다.

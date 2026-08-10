@@ -7,6 +7,10 @@ dist/
 build/
 *.log
 
+# 빌드 산출물 — `npm run package` 결과물은 dist/ 에 떨어진다.
+# dist/ 로 이미 걸러지지만, 다른 경로에서 만든 zip 도 커밋되지 않게 이름으로 한 번 더 막는다.
+*.zip
+
 # OS
 .DS_Store
 Thumbs.db

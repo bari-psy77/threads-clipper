@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "package": "node scripts/package.js"
   },
   "devDependencies": {
     "vitest": "^2.0.0",
