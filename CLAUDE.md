@@ -14,8 +14,13 @@ Chrome extension. Threads 게시물을 Obsidian Local REST API로 마크다운 �
 
 ## Layout
 
-- `src/content/scrape.js` — Threads DOM 추출 (IIFE, content script)
-- `src/background/` — service worker, obsidian-client, markdown-builder, notify, folder-name
+- `src/content/scrape.js` — Threads DOM 추출 (IIFE, content script). 이미지 + 동영상(`{src, poster, duration, alt, streaming}`)
+- `src/background/` — service worker, obsidian-client, media(이미지·동영상 업로드), markdown-builder, notify, folder-name
 - `src/options/` — 옵션 페이지 (API host/token/folder/vaultName)
 - `src/shared/settings.js` — chrome.storage.sync 래퍼
-- `tests/fixtures/post-sample.html` — scrape fixture (셀렉터와 mismatch, 1개 테스트 기존 실패)
+- `tests/fixtures/` — scrape fixture (`post-sample.html` 한국어 UI, `post-sample-en.html` 영어 UI, `post-video-sample.html` 동영상)
+
+## 동영상 정책
+
+blob:(MediaSource)·HLS·DASH는 파일로 못 받으므로 **시도하지 않는다**. 평문 `https://…mp4`만 저장하고,
+나머지는 poster 썸네일 + 원본 게시물 링크로 남긴다. 동영상이 노트에서 흔적 없이 사라지면 안 된다.

@@ -2,6 +2,7 @@ import { loadSettings } from '../shared/settings.js';
 import { ObsidianClient, ObsidianAuthError, ObsidianConnectionError } from './obsidian-client.js';
 import { buildFolderName, resolveCollision } from './folder-name.js';
 import { buildMarkdown } from './markdown-builder.js';
+import { uploadMedia } from './media.js';
 import { notify } from './notify.js';
 
 const POST_URL_RE = /^https:\/\/www\.threads\.com\/@[^\/]+\/post\/[^\/?#]+/;
@@ -96,8 +97,9 @@ async function savePost(client, settings, post, { overwrite, existingPath } = {}
     folderPath = `${settings.folder}/${folderName}`;
   }
 
-  const { imageMap, missingImages } = await uploadImages(client, folderPath, post.segments);
-  const md = buildMarkdown({ post, imageMap, missingImages });
+  const { imageMap, missingImages, videoMap, posterMap, missingVideos } =
+    await uploadMedia({ client, folderPath, segments: post.segments });
+  const md = buildMarkdown({ post, imageMap, missingImages, videoMap, posterMap, missingVideos });
   await client.putMarkdown(`${folderPath}/${folderName}.md`, md);
 
   return { duplicate: false, folderName, folderPath };
@@ -232,40 +234,6 @@ function broadcastProgress(payload) {
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
-}
-
-async function uploadImages(client, folderPath, segments) {
-  const imageMap = {};
-  const missingImages = [];
-  let counter = 1;
-
-  for (const seg of segments) {
-    for (const url of seg.images || []) {
-      const filename = `img${counter}.${guessExt(url)}`;
-      try {
-        const blob = await fetchAsBlob(url);
-        await client.putBinary(`${folderPath}/${filename}`, blob, blob.type || 'image/jpeg');
-        imageMap[url] = filename;
-      } catch (e) {
-        missingImages.push(counter);
-        console.warn('[threads-clipper] image failed', url, e);
-      }
-      counter++;
-    }
-  }
-
-  return { imageMap, missingImages };
-}
-
-function guessExt(url) {
-  const m = url.match(/\.([a-z0-9]{2,5})(?:\?|$)/i);
-  return m ? m[1].toLowerCase() : 'jpg';
-}
-
-async function fetchAsBlob(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.blob();
 }
 
 function sleep(ms) {

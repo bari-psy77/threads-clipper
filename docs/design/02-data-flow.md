@@ -69,10 +69,14 @@ User           Background SW       Content Script     Obsidian API       Threads
   - 작성자 핸들 (`@username`)
   - 게시일 (ISO 8601)
   - 본문 텍스트
-  - 본문 이미지 URL 목록
+  - 본문 이미지 URL 목록 (동영상 커버로 쓰인 `<img>`는 poster와 중복이므로 제외)
+  - 동영상 목록 — `{ src, poster, duration, alt, streaming }`
+    - `src`: `video[src]` 또는 `<source src>` 중 평문 http(s) URL. `blob:`/`.m3u8`/`.mpd`면 `null` + `streaming: true`
+    - `duration`: 메타데이터가 로드됐으면 `video.duration`, 아니면 플레이어 래퍼(최대 3단계) 안의 `mm:ss` 배지
+    - `alt`: `aria-label` / `alt` / `title`
 - 작성자가 자기 자신에게 단 답글들 순서대로 수집:
   - 각 답글의 작성자 핸들이 원 게시물 작성자와 같은지 비교
-  - 본문 + 이미지 URL 목록 추출
+  - 본문 + 이미지 + 동영상 목록 추출
 - 다른 사람의 답글은 무시
 
 ### ④ 추출 결과 JSON
@@ -88,15 +92,34 @@ Content Script → Background로 보내는 데이터 형식:
     "segments": [
       {
         "text": "원 게시물 본문...",
-        "images": ["https://cdn.threads.com/.../img1.jpg"]
+        "images": ["https://cdn.threads.com/.../img1.jpg"],
+        "videos": []
       },
       {
         "text": "이어쓴 댓글 1...",
-        "images": ["https://cdn.threads.com/.../img2.jpg"]
+        "images": ["https://cdn.threads.com/.../img2.jpg"],
+        "videos": [
+          {
+            "src": null,
+            "poster": "https://scontent.cdninstagram.com/.../poster1.jpg",
+            "duration": "0:42",
+            "alt": "바닷가에서 찍은 영상",
+            "streaming": true
+          }
+        ]
       },
       {
         "text": "이어쓴 댓글 2...",
-        "images": []
+        "images": [],
+        "videos": [
+          {
+            "src": "https://scontent.cdninstagram.com/.../clip.mp4",
+            "poster": null,
+            "duration": null,
+            "alt": null,
+            "streaming": false
+          }
+        ]
       }
     ]
   }
@@ -125,25 +148,34 @@ Content Script → Background로 보내는 데이터 형식:
 - Windows 금지문자 `\ / : * ? " < > |` 제거
 - 폴더명 충돌 시 ` (2)`, ` (3)` 자동 suffix
 
-### ⑧ 이미지 다운로드
+### ⑧ 미디어 다운로드 (`background/media.js`)
 - 각 이미지 URL을 `fetch(url)` → `blob()` 로 가져옴
 - 이미지 파일명: 순서대로 `img1.jpg`, `img2.jpg`, ... (확장자는 Content-Type 또는 URL 끝에서 추론)
 - 일부 실패 시: 그 이미지 인덱스를 누락 목록에 기록 (⑪에서 코멘트로 표시)
+- 동영상은 세그먼트 순서대로 1번부터 번호를 매기고(이미지와 별도 카운터):
+  - `src`가 있으면 `fetch` → `vidN.mp4` 저장 → `videoMap[src] = 'vidN.mp4'`
+  - `src`가 없거나(스트리밍 전용) 다운로드가 실패하면 **fetch를 시도조차 하지 않거나 포기하고**,
+    `poster`를 `vidN-poster.jpg`로 저장 → `posterMap[poster] = 'vidN-poster.jpg'`
+  - 어느 쪽이든 파일 저장에 실패한 동영상 번호는 `missingVideos`에 기록 → ⑪에서 참조 콜아웃 + 코멘트
+- blob URL은 fetch가 불가능하므로 시도하지 않는다(네트워크 낭비·오류 로그 방지)
 
 ### ⑨ 폴더 생성
 - `POST {apiHost}/vault/Thread/{폴더명}/` (디렉토리 생성)
 - Local REST API에 디렉토리 생성 엔드포인트가 직접 없으면 `note.md`를 PUT하는 것만으로 디렉토리가 자동 생성됨 (⑪에서 처리)
 
-### ⑩ 이미지 업로드
-- 각 이미지에 대해:
+### ⑩ 미디어 업로드
+- 각 이미지/동영상/썸네일에 대해:
   - `PUT {apiHost}/vault/Thread/{폴더명}/img{N}.{ext}`
   - Content-Type: 원본 image/* MIME
   - Body: 이미지 binary (Blob)
   - Headers: `Authorization: Bearer {apiToken}`
 
 ### ⑪ note.md 생성/업로드
-- 추출 결과를 마크다운으로 조립 (frontmatter + segments + 이미지 임베드 + `---` 구분자)
+- 추출 결과를 마크다운으로 조립 (frontmatter + segments + 이미지/동영상 임베드 + `---` 구분자)
+- 저장된 동영상은 `![[vidN.mp4]]`, 저장하지 못한 동영상은 썸네일·재생 길이·설명·원본 게시물 링크를 담은
+  `> [!info] 동영상` 콜아웃 (동영상 존재 사실이 절대 사라지지 않게 하는 장치)
 - 누락된 이미지가 있으면 본문 끝에 `<!-- 이미지 N개 누락 -->` 추가
+- 파일로 저장 못한 동영상이 있으면 `<!-- 동영상 N개 파일 저장 실패 — 링크만 기록 -->` 추가
 - `PUT {apiHost}/vault/Thread/{폴더명}/note.md`
 - Content-Type: `text/markdown`
 - Body: 마크다운 텍스트
@@ -172,6 +204,7 @@ Content Script → Background로 보내는 데이터 형식:
 | ⑥ | API 응답 없음 | "Obsidian을 켜주세요" |
 | ⑥ | 중복 발견 | "이미 저장됨, 기존 노트 열기" 버튼 |
 | ⑧ | 이미지 다운로드 실패 (일부) | (조용히 진행, 노트 끝에 코멘트) |
+| ⑧ | 동영상이 스트리밍 전용이거나 다운로드 실패 | (조용히 진행, 본문에 참조 콜아웃 + 노트 끝에 코멘트) |
 | ⑩ / ⑪ | 업로드 실패 | "Obsidian 저장 실패: {에러 메시지}" |
 
 ## 트랜잭션 / 부분 실패 정책

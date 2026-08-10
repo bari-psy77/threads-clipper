@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test post (video)</title></head>
+<body>
+<main>
+  <!-- ① 원 게시물: 스트리밍 전용 동영상.
+       Threads 플레이어는 MediaSource로 DASH 조각을 이어붙이므로 video[src]가 blob: 이고,
+       실제 파일 URL은 poster(커버 이미지)뿐이다. 커버가 <img>로 한 번 더 깔리는 경우도 있음. -->
+  <article role="article" data-pressable-container>
+    <header>
+      <a href="/@testuser"><span dir="auto">testuser</span></a>
+      <time datetime="2026-05-04T18:23:00Z"><span dir="auto">1시간</span></time>
+    </header>
+    <div>
+      <span dir="auto">동영상 게시물 본문입니다.</span>
+    </div>
+    <div class="media-wrapper">
+      <video
+        playsinline
+        preload="none"
+        crossorigin="anonymous"
+        aria-label="바닷가에서 찍은 영상"
+        poster="https://scontent.cdninstagram.com/v/t51.71878-15/poster1.jpg?stp=dst-jpg_e15"
+        src="blob:https://www.threads.com/6a0c9d5e-6f5a-4a1e-9a34-6d3e7e2d1b77"></video>
+      <img src="https://scontent.cdninstagram.com/v/t51.71878-15/poster1.jpg?stp=dst-jpg_e15" alt="" />
+      <div class="duration-badge"><span dir="auto">0:42</span></div>
+    </div>
+  </article>
+
+  <!-- ② 이어쓴 답글: progressive mp4가 video[src]에 그대로 노출된 경우 (짧은 클립에서 관찰) -->
+  <article role="article" data-pressable-container>
+    <header>
+      <a href="/@testuser"><span dir="auto">testuser</span></a>
+      <time datetime="2026-05-04T18:25:00Z"><span dir="auto">1시간</span></time>
+    </header>
+    <div>
+      <span dir="auto">이어쓴 답글 1</span>
+    </div>
+    <div class="media-wrapper">
+      <video
+        playsinline
+        preload="metadata"
+        poster="https://scontent.cdninstagram.com/v/t51.71878-15/poster2.jpg"
+        src="https://scontent.cdninstagram.com/o1/v/t2/f2/m86/clip2.mp4?efg=abcdef"></video>
+    </div>
+  </article>
+
+  <!-- ③ 다른 사용자의 답글 — 동영상까지 통째로 무시되어야 함 -->
+  <article role="article" data-pressable-container>
+    <header>
+      <a href="/@otheruser"><span dir="auto">otheruser</span></a>
+      <time datetime="2026-05-04T19:01:00Z"><span dir="auto">30분</span></time>
+    </header>
+    <div>
+      <span dir="auto">다른 사람의 답글 — 무시되어야 함</span>
+    </div>
+    <div class="media-wrapper">
+      <video src="https://scontent.cdninstagram.com/o1/v/t2/f2/m86/other.mp4"></video>
+    </div>
+  </article>
+
+  <!-- ④ 이어쓴 답글: 한 세그먼트에 동영상 2개.
+       (a) <source> 자식으로 mp4 제공, poster 없음  (b) HLS 재생목록(.m3u8) — 파일 다운로드 불가 -->
+  <article role="article" data-pressable-container>
+    <header>
+      <a href="/@testuser"><span dir="auto">testuser</span></a>
+      <time datetime="2026-05-04T19:10:00Z"><span dir="auto">20분</span></time>
+    </header>
+    <div>
+      <span dir="auto">이어쓴 답글 2</span>
+    </div>
+    <div class="media-wrapper">
+      <video playsinline preload="none">
+        <source src="https://scontent.cdninstagram.com/o1/v/t2/f2/m86/clip4.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <div class="media-wrapper">
+      <video playsinline src="https://scontent.cdninstagram.com/hls/clip5.m3u8"></video>
+    </div>
+  </article>
+</main>
+</body>
+</html>

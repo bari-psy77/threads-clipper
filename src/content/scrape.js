@@ -7,6 +7,7 @@
     textSpan: 'span[dir="auto"]',
     image: 'img[src]',
     time: 'time[datetime]',
+    video: 'video',
   };
 
   const URL_RE = /^https?:\/\/[^\/]+\/(@[^\/]+)\/post\/[^\/]+/;
@@ -17,6 +18,12 @@
   const UI_EXACT = ['Top', 'Recent'];
   const PROFILE_ALT_RE = /프로필 사진|Profile photo/;
   const AVATAR_MAX_PX = 40;
+  // 파일 하나로 내려받을 수 없는 소스. blob:은 MediaSource(DASH 조각 재조립)라 fetch 자체가 실패하고,
+  // m3u8/mpd는 재생목록일 뿐이라 별도 플레이어 없이는 의미가 없다 → 참조만 남긴다.
+  const STREAM_SRC_RE = /^blob:|^data:|\.(m3u8|mpd)(\?|$)/i;
+  const TIMECODE_RE = /^\d{1,2}:\d{2}(:\d{2})?$/;
+  // 재생 길이 배지는 플레이어 래퍼 안에 있음. 본문 span과 섞이지 않게 탐색 깊이를 제한.
+  const VIDEO_WRAPPER_DEPTH = 3;
 
   function isBodyTextSpan(span) {
     const authorLink = span.closest('a[href^="/@"]');
@@ -77,14 +84,92 @@
     return m ? m[1] : null;
   }
 
+  function isHttpUrl(u) {
+    return /^https?:\/\//.test(u || '');
+  }
+
+  // video 요소를 감싼 플레이어 래퍼들(안쪽 → 바깥쪽). 재생 길이 배지 탐색과
+  // 본문 텍스트 필터링에 함께 쓴다.
+  function wrappersOfVideo(video, article) {
+    const out = [];
+    let node = video.parentElement;
+    for (let i = 0; i < VIDEO_WRAPPER_DEPTH && node && node !== article; i++) {
+      out.push(node);
+      node = node.parentElement;
+    }
+    return out;
+  }
+
+  function videoWrappersOfArticle(article) {
+    const out = [];
+    for (const v of article.querySelectorAll(SELECTORS.video)) {
+      out.push(...wrappersOfVideo(v, article));
+    }
+    return out;
+  }
+
+  // Threads 플레이어는 보통 MediaSource(blob:)로 재생하고, 짧은 클립 등 일부에서만
+  // progressive mp4가 src/<source>에 그대로 노출된다. 평문 http(s) URL만 다운로드 대상.
+  function videoSourceOf(video) {
+    const candidates = [video.getAttribute('src') || ''];
+    for (const s of video.querySelectorAll('source[src]')) {
+      candidates.push(s.getAttribute('src') || '');
+    }
+    for (const c of candidates) {
+      if (isHttpUrl(c) && !STREAM_SRC_RE.test(c)) return { src: c, streaming: false };
+    }
+    return { src: null, streaming: true };
+  }
+
+  function formatDuration(sec) {
+    const total = Math.round(sec);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function durationOfVideo(video, article) {
+    const d = Number(video.duration);
+    if (Number.isFinite(d) && d > 0) return formatDuration(d);
+    // 메타데이터가 아직 로드되지 않았으면(preload="none") 화면의 mm:ss 배지가 유일한 단서
+    for (const wrap of wrappersOfVideo(video, article)) {
+      for (const el of wrap.querySelectorAll('span')) {
+        const t = (el.textContent || '').trim();
+        if (TIMECODE_RE.test(t)) return t;
+      }
+    }
+    return null;
+  }
+
+  function videosOfArticle(article) {
+    const out = [];
+    for (const v of article.querySelectorAll(SELECTORS.video)) {
+      const { src, streaming } = videoSourceOf(v);
+      const poster = v.getAttribute('poster') || '';
+      const alt = (v.getAttribute('aria-label') || v.getAttribute('alt') || v.getAttribute('title') || '').trim();
+      out.push({
+        src,
+        poster: isHttpUrl(poster) ? poster : null,
+        duration: durationOfVideo(v, article),
+        alt: alt || null,
+        streaming,
+      });
+    }
+    return out;
+  }
+
   function textOfArticle(article) {
     const elements = article.querySelectorAll(`time, ${SELECTORS.textSpan}`);
+    const videoWrappers = videoWrappersOfArticle(article);
     const parts = [];
     let pastHeader = false;
     for (const el of elements) {
       if (el.tagName === 'TIME') { pastHeader = true; continue; }
       if (!pastHeader) continue;
       if (!isBodyTextSpan(el)) continue;
+      // 플레이어 안의 "0:42" 배지는 본문이 아님
+      if (TIMECODE_RE.test((el.textContent || '').trim()) &&
+          videoWrappers.some((w) => w.contains(el))) continue;
       const t = expandSpanText(el).trim();
       if (!t) continue;
       if (PLACEHOLDER_RE.test(t)) continue;
@@ -96,7 +181,8 @@
     return parts.join('\n');
   }
 
-  function imagesOfArticle(article) {
+  function imagesOfArticle(article, videos) {
+    const posters = new Set((videos || []).map((v) => v.poster).filter(Boolean));
     const imgs = article.querySelectorAll(SELECTORS.image);
     const urls = [];
     for (const img of imgs) {
@@ -107,6 +193,8 @@
       if (w > 0 && w <= AVATAR_MAX_PX) continue;
       if (h > 0 && h <= AVATAR_MAX_PX) continue;
       const src = img.getAttribute('src');
+      // 동영상 커버(poster)가 <img>로 한 번 더 깔린 경우 — videos 쪽에서 다루므로 중복 저장 방지
+      if (posters.has(src)) continue;
       if (src) urls.push(src);
     }
     return urls;
@@ -132,9 +220,11 @@
       const author = authorOfArticle(art);
       if (author !== originalAuthor) continue;
       if (!postedAt) postedAt = postedAtOfArticle(art);
+      const videos = videosOfArticle(art);
       segments.push({
         text: textOfArticle(art),
-        images: imagesOfArticle(art),
+        images: imagesOfArticle(art, videos),
+        videos,
       });
     }
 

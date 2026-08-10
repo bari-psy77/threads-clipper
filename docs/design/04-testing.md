@@ -24,6 +24,10 @@
 | 이어쓴 segment 다수 | segments 3개 | 각 segment가 `---` 구분자로 분리 |
 | 이미지 누락 표시 | `missingImages: [1]` | 본문 끝에 `<!-- 이미지 1개 누락 -->` |
 | 첫줄에 마크다운 특수문자 | `text: "# Hello"` | 그대로 사용 (사용자가 의도한 형식이므로 escape 안 함) |
+| 동영상 파일 저장 성공 | `videoMap: { src: "vid1.mp4" }` | `![[vid1.mp4]]` 임베드 |
+| 스트리밍 전용 동영상 | `streaming: true` + `posterMap` | `> [!info] 동영상 (0:42)` 콜아웃 + 썸네일 + 원본 링크 |
+| 썸네일도 없는 동영상 | `poster: null` | 콜아웃 + 원본 링크 (**절대 조용히 사라지지 않음**) |
+| 동영상 저장 실패 표시 | `missingVideos: [1,2]` | 본문 끝에 `<!-- 동영상 2개 파일 저장 실패 — 링크만 기록 -->` |
 
 #### `folder-name.js`
 
@@ -61,6 +65,19 @@
 | 네트워크 오류 (fetch reject) | 에러 메시지에 "Obsidian 미실행" 힌트 포함 |
 | `listFolder` 빈 폴더 | 빈 배열 반환 |
 
+### 대상: `media.js` 의 `uploadMedia`
+
+`fetchImpl`과 `client.putBinary`를 mock으로 주입:
+
+| 시나리오 | 기대 |
+|---|---|
+| 이미지 2개 (세그먼트 2개에 분산) | `img1`, `img2` 연속 번호 |
+| 이미지 다운로드 404 | throw 없이 `missingImages`에 기록 |
+| 평문 `src` 동영상 | `vidN.mp4` PUT, `videoMap`에 매핑, poster는 받지 않음 |
+| 스트리밍 전용 동영상 | 동영상 URL로는 **fetch 호출 자체가 없어야 함**, poster만 PUT |
+| 동영상 다운로드 실패 | poster로 폴백, `missingVideos`에 기록 |
+| poster 업로드까지 실패 | throw 없이 `missingVideos`만 남음 |
+
 ### 대상: `folder-name.js` 의 `resolveCollision`
 
 mock client로 `listFolder` 결과 시뮬레이션:
@@ -86,6 +103,10 @@ mock client로 `listFolder` 결과 시뮬레이션:
 - [ ] **이미지 1개 단일 게시물** 저장 → 이미지 다운로드되고 마크다운에 `![[img1.jpg]]` 임베드
 - [ ] **이미지 여러 개 + 이어쓴 댓글 2개** 저장 → 각 segment가 `---`로 구분, 이미지가 올바른 segment에 임베드
 - [ ] 저장 성공 알림 클릭 → Obsidian에서 노트 열림
+- [ ] **동영상 게시물** 저장 → 노트에 동영상 흔적이 반드시 남는지 확인 (`![[vidN.mp4]]` 또는 썸네일+원본 링크 콜아웃). 텍스트만 남으면 실패
+- [ ] 동영상 게시물에서 커버 이미지가 `imgN.jpg`와 `vidN-poster.jpg`로 **중복 저장되지 않는지** 확인
+- [ ] 동영상 재생 길이 배지(`0:42`)가 본문 텍스트에 섞이지 않는지 확인
+- [ ] (진단) 실제 게시물에서 `document.querySelectorAll('video')`의 `src`가 `blob:`인지 `https://…mp4`인지 확인 → 저장 결과가 예상과 맞는지 대조
 
 ### 트리거
 - [ ] 확장 아이콘 클릭으로 저장
