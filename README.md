@@ -116,6 +116,10 @@ npm run test:watch
 
 빌드 단계는 없음 — 파일을 그대로 Chrome에 압축해제 로드.
 
+### CI
+
+GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))가 `main` push 와 `main` 대상 PR에서 ubuntu-latest로 `npm ci` → `npx vitest run`을 돌린다 (Node 22, npm 캐시, 스케줄 실행 없음). 린터는 설정돼 있지 않아 CI에도 없다.
+
 ## 알려진 제한
 
 - **동영상 원본 파일은 대부분 저장 불가** — 스트리밍(blob:/HLS/DASH) 재생분은 썸네일 + 원본 링크만 남음 (위 [동영상은 어디까지 저장되나](#동영상은-어디까지-저장되나) 참고)

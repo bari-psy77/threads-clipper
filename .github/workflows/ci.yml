@@ -1,0 +1,33 @@
+name: CI
+
+# 트리거는 main push / main 대상 PR 뿐이다.
+# 스케줄(cron)은 두지 않는다 — 프라이빗 레포 무료 분(minutes) 예산을 지키기 위함.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # package-lock.json 이 커밋돼 있고 package.json 과 일치하므로 재현 가능한 npm ci 를 쓴다.
+      - name: Install dependencies
+        run: npm ci
+
+      # 린터는 이 레포에 설정돼 있지 않다 — 없는 스크립트를 부르지 않는다.
+      - name: Run tests
+        run: npx vitest run
